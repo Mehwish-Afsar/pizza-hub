@@ -14,9 +14,7 @@ const adminRoutes = require("./routes/admin.routes");
 const paymentRoutes = require("./routes/payment.routes");
 const settingsRoutes = require("./routes/setting.routes");
 const notificationRoutes = require("./routes/notification.routes");
-
-
-
+const cronRoutes = require("./routes/cron.routes");
 const { startInventoryJob } = require("./jobs/inventory.job");
 const { verifyEmailConnection } = require("./services/email.service");
 
@@ -62,6 +60,7 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/settings", settingsRoutes);
 app.use("/api/admin/notifications", notificationRoutes);
+app.use("/api/cron", cronRoutes);
 
 // 404 handler
 app.use((req, res) => {
@@ -106,30 +105,32 @@ app.use((error, req, res, next) => {
   });
 });
 
-// Start server
-const PORT = process.env.PORT || 5000;
+if (process.env.VERCEL !== "1") {
+  const PORT = process.env.PORT || 5000;
 
-const server = app.listen(PORT, () => {
-  console.log("========================================");
-  console.log("🍕 Pizza Delivery API");
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`🌐 http://localhost:${PORT}`);
-  console.log(`❤️  Health: http://localhost:${PORT}/api/health`);
-  console.log(`📦 Environment: ${process.env.NODE_ENV || "development"}`);
-  console.log("========================================");
-});
-
-verifyEmailConnection();
-startInventoryJob();
-
-// Graceful shutdown
-function shutdown(signal) {
-  console.log(`${signal} received. Shutting down...`);
-  server.close(() => {
-    console.log("Server closed.");
-    process.exit(0);
+  const server = app.listen(PORT, () => {
+    console.log("========================================");
+    console.log("🍕 Pizza Delivery API");
+    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`🌐 http://localhost:${PORT}`);
+    console.log(`❤️  Health: http://localhost:${PORT}/api/health`);
+    console.log(`📦 Environment: ${process.env.NODE_ENV || "development"}`);
+    console.log("========================================");
   });
+
+  verifyEmailConnection();
+  startInventoryJob();
+
+  function shutdown(signal) {
+    console.log(`${signal} received. Shutting down...`);
+    server.close(() => {
+      console.log("Server closed.");
+      process.exit(0);
+    });
+  }
+
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
+  process.on("SIGINT", () => shutdown("SIGINT"));
 }
 
-process.on("SIGTERM", () => shutdown("SIGTERM"));
-process.on("SIGINT", () => shutdown("SIGINT"));
+module.exports = app;
